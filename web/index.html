@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicken Kitchen - HR Forms</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1 id="headerTitle">CHICKEN KITCHEN - HR FORMS</h1>
+    <div class="lang-select">
+      <span id="langLabel">Language:</span>
+      <select id="langSelect" onchange="switchLanguage(this.value)">
+        <option value="en">English</option>
+        <option value="es">Espanol</option>
+        <option value="ht">Kreyol</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <button data-form="employee_app" onclick="showForm('employee_app')">Employee Application</button>
+      <button data-form="direct_deposit" onclick="showForm('direct_deposit')">Direct Deposit</button>
+      <button data-form="w4" onclick="showForm('w4')">W-4 (2026)</button>
+      <button data-form="i9" onclick="showForm('i9')">I-9 Verification</button>
+      <button data-form="payroll" onclick="showForm('payroll')">Payroll Action</button>
+      <div style="border-top:1px solid #444;margin:8px 5px;"></div>
+      <button data-form="documents" onclick="showForm('documents')" style="color:#4CAF50;">Documents & Submit</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content-wrapper">
+      <div class="content" id="content">
+        <div class="welcome" id="welcome">
+          <span>Select a form from the sidebar to begin.</span>
+        </div>
+      </div>
+      <div class="btn-bar">
+        <button class="btn-clear" id="btnClear" onclick="clearForm()">Clear Form</button>
+        <button class="btn-preview" id="btnPreview" onclick="previewPDF()">Preview</button>
+        <button class="btn-export" id="btnExport" onclick="exportPDF()">Export PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview modal (hidden) -->
+  <div class="preview-overlay" id="previewOverlay" style="display:none">
+    <div class="preview-toolbar">
+      <button onclick="zoomPreview(-0.15)">-</button>
+      <span class="zoom-label" id="zoomLabel">100%</span>
+      <button onclick="zoomPreview(0.15)">+</button>
+      <span class="title" id="previewFormName"></span>
+      <button class="close-btn" onclick="closePreview()">X</button>
+    </div>
+    <div class="preview-body" id="previewBody"></div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    // Configure pdf.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  </script>
+  <script src="translations.js"></script>
+  <script src="us-data.js"></script>
+  <script src="pdf-overlay.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

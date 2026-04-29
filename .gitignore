@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Build artifacts (desktop EXE - not needed for Streamlit)
+build/
+dist/
+*.spec
+
+# Secrets - NEVER commit
+.streamlit/secrets.toml
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Reference documents (not needed for deployment)
+*.docx
+*.xlsx
