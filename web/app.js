@@ -657,7 +657,117 @@ function buildDocuments() {
   return c;
 }
 
+// ─── Streamlit Detection ───
+function isStreamlit() {
+  try { return window.parent !== window && typeof window.Streamlit !== 'undefined'; }
+  catch(e) { return false; }
+}
+
+// Check if a form has any filled data
+function formHasData(formKey) {
+  const prefixes = {
+    employee_app: 'ea_', direct_deposit: 'dd_',
+    w4: 'w4_', i9: 'i9_', payroll: 'pa_'
+  };
+  const prefix = prefixes[formKey];
+  if (!prefix) return false;
+  for (const [key, val] of Object.entries(formValues)) {
+    if (key.startsWith(prefix) && val && typeof val === 'string' && val.trim() !== '') {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Generate all filled form PDFs and send to Streamlit for email delivery
+async function submitToStreamlit() {
+  const name = getVal('doc_name');
+  const email = getVal('doc_email');
+
+  if (!name || !name.trim()) {
+    alert(t('doc_name_required'));
+    return;
+  }
+
+  const submitBtn = document.querySelector('.btn-submit-app');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Generating PDFs... / Generando PDFs...';
+  }
+
+  try {
+    const formKeys = ['employee_app', 'direct_deposit', 'w4', 'i9', 'payroll'];
+    const names = {
+      employee_app: 'Employee_Application', direct_deposit: 'Direct_Deposit',
+      w4: 'W4_Form_2026', i9: 'I9_Form', payroll: 'Payroll_Action'
+    };
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const pdfs = {};
+
+    formValues._lang = currentLang;
+
+    for (const key of formKeys) {
+      if (formHasData(key)) {
+        try {
+          const pdfBytes = await generatePDF(key, getVal);
+          const bytes = new Uint8Array(pdfBytes);
+          let binary = '';
+          const chunk = 8192;
+          for (let i = 0; i < bytes.length; i += chunk) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+          }
+          pdfs[names[key] + '_' + today + '.pdf'] = btoa(binary);
+        } catch (e) {
+          console.error('Error generating PDF for ' + key + ':', e);
+        }
+      }
+    }
+
+    // Collect uploaded identity documents as base64
+    const docs = {};
+    const docKeys = Object.keys(uploadedDocs);
+    for (let d = 0; d < docKeys.length; d++) {
+      const file = uploadedDocs[docKeys[d]];
+      const b64 = await new Promise(function(resolve) {
+        const reader = new FileReader();
+        reader.onload = function() { resolve(reader.result.split(',')[1]); };
+        reader.readAsDataURL(file);
+      });
+      docs[file.name] = b64;
+    }
+
+    if (Object.keys(pdfs).length === 0 && Object.keys(docs).length === 0) {
+      alert('Please fill at least one form or upload documents.\n' +
+            'Por favor llene al menos un formulario o cargue documentos.');
+      return;
+    }
+
+    window.Streamlit.setComponentValue({
+      action: 'submit',
+      submit_id: Date.now(),
+      name: name,
+      email: email,
+      pdfs: pdfs,
+      docs: docs
+    });
+
+  } catch (e) {
+    alert('Error: ' + e.message);
+    console.error(e);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('doc_submit_btn');
+    }
+  }
+}
+
 async function submitApplication() {
+  // If running inside Streamlit, use bidirectional component API
+  if (isStreamlit()) {
+    return submitToStreamlit();
+  }
+
   const name = getVal('doc_name');
   const email = getVal('doc_email');
 

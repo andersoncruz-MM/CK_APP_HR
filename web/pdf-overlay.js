@@ -18,8 +18,18 @@ const CHECK_COLOR_RGB = [0.1, 0.1, 0.6];
 async function generatePDF(formKey, gv) {
   const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
-  const tplUrl = TEMPLATE_FILES[formKey];
-  const tplBytes = await fetch(tplUrl).then(r => r.arrayBuffer());
+  // Use inlined base64 templates (Streamlit) or fetch from file (standalone)
+  let tplBytes;
+  if (typeof TEMPLATE_DATA !== 'undefined' && TEMPLATE_DATA[formKey]) {
+    const _b64 = TEMPLATE_DATA[formKey];
+    const _raw = atob(_b64);
+    const _arr = new Uint8Array(_raw.length);
+    for (let i = 0; i < _raw.length; i++) _arr[i] = _raw.charCodeAt(i);
+    tplBytes = _arr.buffer;
+  } else {
+    const tplUrl = TEMPLATE_FILES[formKey];
+    tplBytes = await fetch(tplUrl).then(r => r.arrayBuffer());
+  }
   const pdfDoc = await PDFDocument.load(tplBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fillColor = rgb(...FILL_COLOR_RGB);

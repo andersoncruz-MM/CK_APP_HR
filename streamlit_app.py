@@ -10,6 +10,7 @@ import random
 import string
 import smtplib
 import datetime
+import tempfile
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -197,8 +198,12 @@ def generate_qr_bytes(url):
 # ═══════════════════════════════════════════
 
 @st.cache_data
-def build_hr_app_html():
-    """Build a self-contained HTML page with all JS/CSS/PDFs inlined."""
+def build_hr_component_html():
+    """Build a self-contained HTML page with Streamlit component support.
+
+    Includes the Streamlit component shim for bidirectional communication,
+    the Documents & Submit tab, and all form/PDF functionality inlined.
+    """
     templates = load_templates_b64()
     css = load_web_file("style.css")
     translations_js = load_web_file("translations.js")
@@ -212,16 +217,39 @@ def build_hr_app_html():
     )
     template_data_js = f"const TEMPLATE_DATA = {{\n    {tpl_entries}\n}};"
 
-    # Patch pdf-overlay.js: replace fetch() with base64 decode
-    pdf_overlay_patched = pdf_overlay_js.replace(
-        "const tplUrl = TEMPLATE_FILES[formKey];\n"
-        "  const tplBytes = await fetch(tplUrl).then(r => r.arrayBuffer());",
-        "const _b64 = TEMPLATE_DATA[formKey];\n"
-        "  const _raw = atob(_b64);\n"
-        "  const _arr = new Uint8Array(_raw.length);\n"
-        "  for (let i = 0; i < _raw.length; i++) _arr[i] = _raw.charCodeAt(i);\n"
-        "  const tplBytes = _arr.buffer;"
-    )
+    # Streamlit component shim - minimal postMessage bridge
+    streamlit_shim = """
+(function() {
+  function sendMsg(type, data) {
+    window.parent.postMessage(
+      Object.assign({ isStreamlitMessage: true, type: type }, data), "*"
+    );
+  }
+  var Streamlit = {
+    RENDER_EVENT: "streamlit:render",
+    events: new EventTarget(),
+    setComponentReady: function() {
+      sendMsg("streamlit:componentReady", { apiVersion: 1 });
+    },
+    setComponentValue: function(value) {
+      sendMsg("streamlit:setComponentValue", { value: value });
+    },
+    setFrameHeight: function(height) {
+      sendMsg("streamlit:setFrameHeight", {
+        height: height || document.body.scrollHeight
+      });
+    }
+  };
+  window.addEventListener("message", function(event) {
+    if (event.data && event.data.type === "streamlit:render") {
+      Streamlit.events.dispatchEvent(
+        new CustomEvent(Streamlit.RENDER_EVENT, { detail: event.data })
+      );
+    }
+  });
+  window.Streamlit = Streamlit;
+})();
+"""
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -234,6 +262,11 @@ def build_hr_app_html():
   </style>
 </head>
 <body>
+
+  <!-- Streamlit Component Shim (must load first) -->
+  <script>
+{streamlit_shim}
+  </script>
 
   <!-- Header -->
   <div class="header">
@@ -256,6 +289,8 @@ def build_hr_app_html():
       <button data-form="w4" onclick="showForm('w4')">W-4 (2026)</button>
       <button data-form="i9" onclick="showForm('i9')">I-9 Verification</button>
       <button data-form="payroll" onclick="showForm('payroll')">Payroll Action</button>
+      <div style="border-top:1px solid #444;margin:8px 5px;"></div>
+      <button data-form="documents" onclick="showForm('documents')" style="color:#4CAF50;">Documents & Submit</button>
     </div>
     <div class="content-wrapper">
       <div class="content" id="content">
@@ -301,13 +336,30 @@ def build_hr_app_html():
   <script>
 {template_data_js}
 
-{pdf_overlay_patched}
+{pdf_overlay_js}
   </script>
   <script>
 {app_js}
   </script>
+
+  <!-- Initialize Streamlit component lifecycle -->
+  <script>
+    if (window.Streamlit) {{
+      window.Streamlit.setComponentReady();
+      window.Streamlit.setFrameHeight(880);
+    }}
+  </script>
 </body>
 </html>"""
+
+
+@st.cache_resource
+def _get_hr_component():
+    """Create and cache the bidirectional HR forms component."""
+    comp_dir = Path(tempfile.mkdtemp(prefix="ck_hr_"))
+    html_content = build_hr_component_html()
+    (comp_dir / "index.html").write_text(html_content, encoding="utf-8")
+    return components.declare_component("ck_hr_forms", path=str(comp_dir))
 
 
 # ═══════════════════════════════════════════
@@ -414,123 +466,46 @@ def show_login_page():
 
 
 # ═══════════════════════════════════════════
-# UPLOAD & SUBMIT PAGE
+# PROCESS COMPONENT SUBMISSION
 # ═══════════════════════════════════════════
 
-def show_upload_submit():
-    st.markdown("""
-    <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:15px;">
-      <h3 style="color:#D32F2F;margin:0 0 5px;">Upload Documents & Submit Application</h3>
-      <p style="color:#555;margin:0;font-size:14px;">
-        Cargar Documentos y Enviar Solicitud / Telechaje Dokiman epi Soumèt Aplikasyon
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
+def _process_submission(data):
+    """Receive form PDFs + identity docs from the component and email them."""
+    name = data.get("name", "Unknown")
+    email = data.get("email", "")
+    pdfs = data.get("pdfs", {})
+    docs = data.get("docs", {})
 
-    # ── Applicant info ──
-    st.markdown("**Applicant / Solicitante:**")
-    c1, c2 = st.columns(2)
-    with c1:
-        name = st.text_input(
-            "Full Name / Nombre Completo *",
-            key="applicant_name",
+    all_files = []
+    for filename, b64 in pdfs.items():
+        buf = BytesIO(base64.b64decode(b64))
+        buf.name = filename
+        all_files.append(buf)
+    for filename, b64 in docs.items():
+        buf = BytesIO(base64.b64decode(b64))
+        buf.name = filename
+        all_files.append(buf)
+
+    if not all_files:
+        st.warning(
+            "No files to send / No hay archivos para enviar / "
+            "Pa gen fichye pou voye"
         )
-    with c2:
-        email = st.text_input(
-            "Email / Correo *",
-            value=st.session_state.user_email,
-            key="applicant_email",
-        )
+        return
 
-    st.markdown("---")
-
-    # ── Completed PDF forms ──
-    st.markdown("**Completed HR Forms (PDF) / Formularios HR completados:**")
-    st.caption(
-        "Upload the PDFs you exported from the Forms tab / "
-        "Cargue los PDFs que exporto de la pestana Formularios"
-    )
-    form_files = st.file_uploader(
-        "PDF Forms",
-        type=["pdf"],
-        accept_multiple_files=True,
-        key="form_pdfs",
-        label_visibility="collapsed",
-    )
-
-    st.markdown("---")
-
-    # ── Identity documents ──
-    st.markdown("**Identity & Supporting Documents / Documentos de Identidad:**")
-    st.caption(
-        "Upload scans or photos / Cargue escaneos o fotos / "
-        "Telechaje foto oswa scan"
-    )
-
-    with st.expander(
-        "Required Documents Checklist / Lista de documentos requeridos"
+    with st.spinner(
+        "Sending application to Chicken Kitchen HR... / "
+        "Enviando solicitud a RR.HH. ..."
     ):
-        st.markdown("""
-| Document / Documento | Description / Descripcion |
-|---|---|
-| **Photo ID (front & back)** | Government-issued photo ID / ID con foto del gobierno |
-| **Driver's License** | Or State ID / O identificacion estatal / Lisans kondwi |
-| **Social Security Card** | Tarjeta de Seguro Social / Kat Sekirite Sosyal |
-| **Work Authorization** | If applicable / Si aplica (Visa, EAD, Green Card) |
-| **Void Check** | For Direct Deposit / Para Deposito Directo / Pou Depo Direk |
-        """)
+        success = send_application_email(name, email, all_files)
 
-    id_files = st.file_uploader(
-        "Identity Documents",
-        type=["pdf", "jpg", "jpeg", "png", "gif", "bmp", "tiff"],
-        accept_multiple_files=True,
-        key="id_docs",
-        label_visibility="collapsed",
-    )
-
-    st.markdown("---")
-
-    # ── Summary ──
-    all_files = (form_files or []) + (id_files or [])
-    if all_files:
-        st.success(
-            f"**{len(all_files)}** file(s) ready / archivo(s) listos: "
-            + ", ".join(f.name for f in all_files)
+    if success:
+        st.session_state.submitted = True
+        st.rerun()
+    else:
+        st.error(
+            f"Error sending / Error al enviar: {st.session_state.error_msg}"
         )
-
-    # ── Submit button ──
-    st.markdown("")
-    if st.button(
-        "SUBMIT APPLICATION / ENVIAR SOLICITUD / SOUMET APLIKASYON",
-        type="primary",
-        use_container_width=True,
-    ):
-        if not name:
-            st.warning(
-                "Please enter your name / Ingrese su nombre / Antre non ou"
-            )
-            return
-        if not all_files:
-            st.warning(
-                "Please upload at least one file / "
-                "Cargue al menos un archivo / "
-                "Telechaje omwen yon fichye"
-            )
-            return
-
-        with st.spinner(
-            "Sending application to Chicken Kitchen HR... / "
-            "Enviando solicitud..."
-        ):
-            success = send_application_email(name, email, all_files)
-
-        if success:
-            st.session_state.submitted = True
-            st.rerun()
-        else:
-            st.error(
-                f"Error sending / Error al enviar: {st.session_state.error_msg}"
-            )
 
 
 # ═══════════════════════════════════════════
@@ -572,7 +547,7 @@ def show_thank_you():
 
 
 # ═══════════════════════════════════════════
-# MAIN HR APP PAGE (tabs: Forms + Upload)
+# MAIN HR APP PAGE
 # ═══════════════════════════════════════════
 
 def show_hr_app():
@@ -584,23 +559,22 @@ def show_hr_app():
                 st.session_state[k] = _defaults[k]
             st.rerun()
 
-    tab_forms, tab_upload = st.tabs([
-        "1. Fill HR Forms / Llenar Formularios",
-        "2. Upload & Submit / Cargar y Enviar",
-    ])
+    st.info(
+        "Fill the forms, then click **Documents & Submit** to send. / "
+        "Llene los formularios, luego haga clic en **Documents & Submit** para enviar. / "
+        "Ranpli fom yo, epi klike sou **Documents & Submit** pou voye."
+    )
 
-    with tab_forms:
-        st.info(
-            "Fill out the forms and click **Export PDF** for each one. "
-            "Then go to tab 2 to upload and submit. / "
-            "Llene los formularios y haga clic en **Exportar PDF**. "
-            "Luego vaya a la pestana 2 para cargar y enviar."
-        )
-        html_content = build_hr_app_html()
-        components.html(html_content, height=880, scrolling=False)
+    # Render the bidirectional HR forms component
+    hr_comp = _get_hr_component()
+    result = hr_comp(key="hr_forms", default=None, height=880)
 
-    with tab_upload:
-        show_upload_submit()
+    # Handle submission from the component
+    if result and isinstance(result, dict) and result.get("action") == "submit":
+        submit_id = result.get("submit_id")
+        if submit_id != st.session_state.get("last_submit_id"):
+            st.session_state.last_submit_id = submit_id
+            _process_submission(result)
 
 
 # ═══════════════════════════════════════════
