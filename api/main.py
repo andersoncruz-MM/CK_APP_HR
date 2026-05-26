@@ -13,7 +13,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 
 from api.store_data import STORES, get_store, get_store_choices
@@ -22,14 +22,17 @@ from api import email_service as email
 
 app = FastAPI(title="Chicken Kitchen HR", docs_url="/api/docs")
 
-# ─── Static files ───
+# ─── Static files (served at root so relative CSS/JS paths work) ───
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-app.mount("/web", StaticFiles(directory=str(WEB_DIR)), name="web")
 
 
 @app.get("/")
 async def root():
-    return FileResponse(str(WEB_DIR / "index.html"))
+    return RedirectResponse("/web/index.html")
+
+
+# Mount AFTER the root route so /api/* routes take priority
+app.mount("/web", StaticFiles(directory=str(WEB_DIR)), name="web")
 
 
 # ─── Models ───

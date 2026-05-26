@@ -6,19 +6,29 @@ Handles all CRUD operations for verifications, applications, and documents.
 import os
 import secrets
 from datetime import datetime, timezone
-from supabase import create_client, Client
+
+try:
+    from supabase import create_client, Client
+    HAS_SUPABASE = True
+except ImportError:
+    HAS_SUPABASE = False
+    Client = None
 
 
-def _get_client() -> Client:
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_KEY"]
+def _get_client():
+    if not HAS_SUPABASE:
+        raise RuntimeError("supabase package not installed. Run: pip install supabase")
+    url = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_KEY", "")
+    if not url or not key:
+        raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in .env")
     return create_client(url, key)
 
 
-db: Client | None = None
+db = None
 
 
-def get_db() -> Client:
+def get_db():
     global db
     if db is None:
         db = _get_client()
