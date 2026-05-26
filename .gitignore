@@ -18,3 +18,10 @@ Thumbs.db
 # Reference documents (not needed for deployment)
 *.docx
 *.xlsx
+
+# Original form PDFs and screenshots in root (not app templates)
+/*.pdf
+/*.png
+
+# Nested git repos (residual clones)
+CK_APP_HR/

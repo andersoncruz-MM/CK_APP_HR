@@ -1,5 +1,13 @@
-fpdf2>=2.8.0
-pyinstaller>=6.0
-streamlit>=1.30.0
-qrcode[pil]>=7.4
-Pillow>=10.0
+# ── Chicken Kitchen HR Forms - Dependencies ──
+# Streamlit Cloud installs these automatically.
+# Pin versions to avoid surprise breakage on deploy.
+
+streamlit==1.57.0
+fpdf2==2.8.7
+reportlab==4.4.10
+pypdf==6.10.2
+Pillow==12.2.0
+qrcode[pil]==8.0
+
+# pyinstaller is only needed for local EXE build (build.bat)
+# Install manually: pip install pyinstaller>=6.0
