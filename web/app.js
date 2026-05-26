@@ -5,6 +5,55 @@
 
 let currentForm = null;
 let formValues = {};  // stores all field values
+let selectedStore = null;  // {code, name, legal_entity, admin_email, address}
+
+// Store data (from CK_Master_Locations.xlsx)
+const CK_STORES = {
+  ALT:{name:"Alton",legal_entity:"CK at Alton Road LLC",admin_email:"ckatalton@gmail.com",address:"1509 Alton Rd, Miami, FL 33139"},
+  BIR:{name:"Bird & Ludlum",legal_entity:"CK at Bird & Ludum LLC",admin_email:"ckbirdludlum@gmail.com",address:"6786 Bird Rd, Miami, FL 33155"},
+  BIS:{name:"Biscayne & 69th",legal_entity:"CK at Buena Vista LLC",admin_email:"buenavista@chickenkitchen.com",address:"6907 Biscayne Blvd, Miami, FL 33138"},
+  BLU:{name:"Blue Lagoon",legal_entity:"CK at Blue Lagoon LLC",admin_email:"bluelagoon@chickenkitchen.com",address:"5765 NW 7th St, Miami, FL 33126"},
+  COL:{name:"Collins & 71st",legal_entity:"CK at North Beach LLC",admin_email:"northbeach@chickenkitchen.com",address:"7116 Collins Ave, Miami, FL 33141"},
+  COU:{name:"Country Walk",legal_entity:"CK at Country Walk LLC",admin_email:"cwalk@chickenkitchen.com",address:"15812 SW 137th Ave, Miami, FL 33175"},
+  CRF:{name:"Coral Reef",legal_entity:"CK at So. Dixie LLC",admin_email:"ckcoralreef@hotmail.com",address:"15053 South Dixie Hwy, Miami, FL 33176"},
+  CUT:{name:"Cutler Ridge",legal_entity:"CK at Cutler Ridge LLC",admin_email:"cutlerbay@chickenkitchen.com",address:"20527 Old Cutler Rd, Cutler Bay, FL 33189"},
+  DAV:{name:"Davie",legal_entity:"CK at Davie LLC",admin_email:"davie@chickenkitchen.com",address:"2319 South University Dr, Davie, FL 33324"},
+  DOR:{name:"Doral",legal_entity:"CK at Doral LLC",admin_email:"doral@chickenkitchen.com",address:"9741 NW 41st St, Miami, FL 33178"},
+  DWT:{name:"Downtown",legal_entity:"CK at Downtown LLC",admin_email:"downtown@chickenkitchen.com",address:"146 NE 2nd Ave, Miami, FL 33132"},
+  FIU:{name:"FIU",legal_entity:"CK at FIU LLC",admin_email:"fiu@chickenkitchen.com",address:"10550 SW 8th St, Miami, FL 33174"},
+  FTL:{name:"Ft Lauderdale",legal_entity:"CK at Plaza del Mar LLC",admin_email:"coralridge@chickenkitchen.com",address:"1523 N Federal Hwy, Fort Lauderdale, FL 33304"},
+  GAL:{name:"Galloway",legal_entity:"CK at Galloway LLC",admin_email:"galloway@chickenkitchen.com",address:"8732 Sunset Dr, Miami, FL 33173"},
+  HAM:{name:"Hammocks",legal_entity:"CK at Hammocks LLC",admin_email:"hammocks@chickenkitchen.com",address:"15738 SW 72nd St, Miami, FL 33193"},
+  KBI:{name:"Key Biscayne",legal_entity:"CK at Key Biscayne LLC",admin_email:"keybiscayne@chickenkitchen.com",address:"65 Harbor Dr Space #6, Key Biscayne, FL 33149"},
+  KEN:{name:"Kendall",legal_entity:"CK at Kendall Mall LLC",admin_email:"chickenkitchenkendall@gmail.com",address:"9067 SW 107th Ave, Miami, FL 33176"},
+  KEY:{name:"Keystone",legal_entity:"CK at Keystone Plaza LLC",admin_email:"keystone@chickenkitchen.com",address:"13521 Biscayne Blvd, North Miami Beach, FL 33183"},
+  LEJ:{name:"Lejeune",legal_entity:"CK at Lejeune LLC",admin_email:"lejeune@chickenkitchen.com",address:"400 South Dixie Hwy, Coral Gables, FL 33146"},
+  MBE:{name:"Miami Beach",legal_entity:"CK at 41st LLC",admin_email:"41st@chickenkitchen.com",address:"524 Arthur Godfrey Rd, Miami Beach, FL 33140"},
+  MGA:{name:"Miami Gardens",legal_entity:"CK at Miami Garders Drive LLC",admin_email:"miagardens@chickenkitchen.com",address:"18515 NE 18th Ave Ste #100, North Miami Beach, FL 33179"},
+  MLK:{name:"Miami Lakes",legal_entity:"CK at Miami Lakes LLC",admin_email:"ckmiamilakes@gmail.com",address:"15221 NW 67th Ave, Miami Lakes, FL 33014"},
+  NML:{name:"N. Miami Lakes",legal_entity:"CK at North Miami Lakes LLC",admin_email:"NMLakes@chickenkitchen.com",address:"6450 NW 186 St, Hialeah, FL 33015"},
+  PCR:{name:"Pinecrest",legal_entity:"CK at Pinecrest LLC",admin_email:"pinecrest@chickenkitchen.com",address:"11403 South Dixie Hwy, Miami, FL 33176"},
+  PLA:{name:"Plantation",legal_entity:"CK at Plantation LLC",admin_email:"plantation@chickenkitchen.com",address:"6985 W Broward Blvd, Plantation, FL 33317"},
+  PNS:{name:"Pembroke Pines",legal_entity:"CK at Pines LLC",admin_email:"ppines@chickenkitchen.com",address:"2014 N Flamingo Rd, Pembroke Pines, FL 33028"},
+  SUN:{name:"Sunset",legal_entity:"CK at Sunset Drive LLC",admin_email:"sunset@chickenkitchen.com",address:"1565 Sunset Dr, Coral Gables, FL 33143"},
+  WBR:{name:"West Bird",legal_entity:"CK at Westbird LLC",admin_email:"westbird@chickenkitchen.com",address:"11425 SW 40th St, Miami, FL 33165"},
+  WPI:{name:"West Pines",legal_entity:"CK at West Pines LLC",admin_email:"westpines@chickenkitchen.com",address:"17149 Pines Blvd, Pembroke Pines, FL 33027"},
+};
+
+function selectStore(code) {
+  const store = CK_STORES[code];
+  if (!store) return;
+  selectedStore = { code, ...store };
+  // Auto-fill employer fields in Employee Application
+  const addr = store.address;
+  setVal('ea_employer_name', store.legal_entity);
+  setVal('ea_employer_address', addr);
+  // Auto-fill employer fields in I-9 and Payroll
+  setVal('i9_employer_biz', store.legal_entity);
+  setVal('i9_employer_addr', addr);
+  setVal('pa_store_name', 'CK ' + store.name);
+  setVal('w4_employer_name', store.legal_entity);
+}
 
 // ─── I-9 Document Lists ───
 const LIST_A_DOCS = [
@@ -586,6 +635,36 @@ let uploadedDocs = {};
 function buildDocuments() {
   const c = document.createDocumentFragment();
 
+  // Store selection
+  const storeSec = section('doc_store_selection');
+  const storeLabel = html('label', { style:'font-weight:600;display:block;margin-bottom:6px;' },
+    [t('doc_select_store') || 'Select store / Seleccione tienda / Chwazi magazen *']);
+  storeSec.appendChild(storeLabel);
+  const storeSel = html('select', { style:'width:100%;padding:8px;font-size:14px;border-radius:6px;border:2px solid #D32F2F;' });
+  storeSel.appendChild(html('option', { value:'' }, ['-- ' + (t('doc_select_store') || 'Select store') + ' --']));
+  Object.keys(CK_STORES).sort((a,b) => CK_STORES[a].name.localeCompare(CK_STORES[b].name)).forEach(code => {
+    const s = CK_STORES[code];
+    const opt = html('option', { value: code }, [s.name + ' — ' + s.address]);
+    if (selectedStore && selectedStore.code === code) opt.selected = true;
+    storeSel.appendChild(opt);
+  });
+  const storeInfo = html('div', { id:'storeInfoBox', style:'margin-top:8px;padding:10px;background:#E8F5E9;border-radius:6px;display:' + (selectedStore ? 'block' : 'none') + ';' });
+  if (selectedStore) {
+    storeInfo.innerHTML = '<strong>' + selectedStore.legal_entity + '</strong><br>' + selectedStore.address;
+  }
+  storeSel.addEventListener('change', () => {
+    selectStore(storeSel.value);
+    if (selectedStore) {
+      storeInfo.style.display = 'block';
+      storeInfo.innerHTML = '<strong>' + selectedStore.legal_entity + '</strong><br>' + selectedStore.address;
+    } else {
+      storeInfo.style.display = 'none';
+    }
+  });
+  storeSec.appendChild(storeSel);
+  storeSec.appendChild(storeInfo);
+  c.appendChild(storeSec);
+
   // Applicant info
   c.appendChild(section('doc_applicant_info',
     fieldRow(buildField(t('doc_full_name'), 'doc_name'), buildField(t('doc_email'), 'doc_email')),
@@ -640,6 +719,15 @@ function buildDocuments() {
   });
 
   c.appendChild(docSec);
+
+  // Signature pad
+  const sigSec = section('doc_signature_section');
+  const sigContainer = html('div', { id: 'signaturePadContainer' });
+  sigSec.appendChild(sigContainer);
+  c.appendChild(sigSec);
+
+  // Initialize signature pad after DOM insert
+  setTimeout(() => { initSignaturePad('signaturePadContainer'); }, 50);
 
   // Submit button section
   const submitSec = section('doc_submit_section',
@@ -706,10 +794,12 @@ async function submitToStreamlit() {
 
     formValues._lang = currentLang;
 
+    const signatureDataUrl = typeof getSignatureBase64 === 'function' ? getSignatureBase64() : '';
+
     for (const key of formKeys) {
       if (formHasData(key)) {
         try {
-          const pdfBytes = await generatePDF(key, getVal);
+          const pdfBytes = await generatePDF(key, getVal, signatureDataUrl);
           const bytes = new Uint8Array(pdfBytes);
           let binary = '';
           const chunk = 8192;
@@ -747,6 +837,8 @@ async function submitToStreamlit() {
       submit_id: Date.now(),
       name: name,
       email: email,
+      store_code: selectedStore ? selectedStore.code : '',
+      signature_b64: signatureDataUrl,
       pdfs: pdfs,
       docs: docs
     });
@@ -770,35 +862,99 @@ async function submitApplication() {
 
   const name = getVal('doc_name');
   const email = getVal('doc_email');
+  const phone = getVal('doc_phone');
 
   if (!name.trim()) {
     alert(t('doc_name_required'));
     return;
   }
+  if (!selectedStore) {
+    alert(t('doc_store_required') || 'Please select a store / Seleccione una tienda');
+    return;
+  }
+  if (!hasSignature()) {
+    alert(t('doc_signature_required') || 'Please sign / Por favor firme / Tanpri siyen');
+    return;
+  }
 
-  const files = Object.values(uploadedDocs);
+  const submitBtn = document.querySelector('.btn-submit-app');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting... / Enviando...';
+  }
 
-  // Build mailto fallback for standalone web version
-  const fileNames = files.map(f => f.name).join(', ');
-  const docCount = files.length;
-  const subject = encodeURIComponent('New Employee Application - ' + name);
-  const body = encodeURIComponent(
-    'New employee application:\n\n' +
-    'Name: ' + name + '\n' +
-    'Email: ' + email + '\n' +
-    'Phone: ' + getVal('doc_phone') + '\n' +
-    'Documents attached: ' + docCount + '\n' +
-    (fileNames ? 'Files: ' + fileNames + '\n' : '') +
-    '\nPlease see attached documents.\n' +
-    '\n---\nSent from Chicken Kitchen HR Forms App'
-  );
+  try {
+    const signatureDataUrl = getSignatureBase64();
+    const formKeys = ['employee_app', 'direct_deposit', 'w4', 'i9', 'payroll'];
+    const names = {
+      employee_app: 'Employee_Application', direct_deposit: 'Direct_Deposit',
+      w4: 'W4_Form_2026', i9: 'I9_Form', payroll: 'Payroll_Action'
+    };
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const pdfs = {};
 
-  // Try EmailJS if configured, otherwise use mailto
-  const mailtoUrl = 'mailto:adela@chickenkitchen.com?subject=' + subject + '&body=' + body;
-  window.open(mailtoUrl);
+    formValues._lang = currentLang;
 
-  // Show thank-you screen
-  showThankYou();
+    for (const key of formKeys) {
+      if (formHasData(key)) {
+        try {
+          const pdfBytes = await generatePDF(key, getVal, signatureDataUrl);
+          const bytes = new Uint8Array(pdfBytes);
+          let binary = '';
+          const chunk = 8192;
+          for (let i = 0; i < bytes.length; i += chunk) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+          }
+          pdfs[names[key] + '_' + today + '.pdf'] = btoa(binary);
+        } catch (e) {
+          console.error('Error generating PDF for ' + key + ':', e);
+        }
+      }
+    }
+
+    // Collect uploaded identity documents as base64
+    const docs = {};
+    for (const [dKey, file] of Object.entries(uploadedDocs)) {
+      const b64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      docs[file.name] = b64;
+    }
+
+    if (Object.keys(pdfs).length === 0 && Object.keys(docs).length === 0) {
+      alert('Please fill at least one form or upload documents.\nPor favor llene al menos un formulario.');
+      return;
+    }
+
+    // Submit to API
+    const resp = await fetch('/api/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email, name, phone,
+        store_code: selectedStore.code,
+        signature_b64: signatureDataUrl,
+        pdfs, docs,
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || 'Server error');
+    }
+
+    showThankYou();
+  } catch (e) {
+    alert('Error: ' + e.message);
+    console.error(e);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('doc_submit_btn');
+    }
+  }
 }
 
 function showThankYou() {
@@ -986,7 +1142,8 @@ async function exportPDF() {
   // Store language for PDF overlay
   formValues._lang = currentLang;
   try {
-    const pdfBytes = await generatePDF(currentForm, getVal);
+    const sigUrl = typeof getSignatureBase64 === 'function' ? getSignatureBase64() : '';
+    const pdfBytes = await generatePDF(currentForm, getVal, sigUrl);
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1008,7 +1165,8 @@ async function previewPDF() {
   if (!currentForm) { alert(t('select_form')); return; }
   formValues._lang = currentLang;
   try {
-    const pdfBytes = await generatePDF(currentForm, getVal);
+    const sigUrl = typeof getSignatureBase64 === 'function' ? getSignatureBase64() : '';
+    const pdfBytes = await generatePDF(currentForm, getVal, sigUrl);
     previewZoom = 1.0;
     el('zoomLabel').textContent = '100%';
     el('previewFormName').textContent = t(FORM_TITLES[currentForm]);

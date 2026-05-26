@@ -15,7 +15,16 @@ const TEMPLATE_FILES = {
 const FILL_COLOR_RGB = [0.05, 0.05, 0.35];
 const CHECK_COLOR_RGB = [0.1, 0.1, 0.6];
 
-async function generatePDF(formKey, gv) {
+// Signature placement coordinates per form {pageIdx: {x, y, width, height}}
+const SIGNATURE_COORDS = {
+  employee_app: { page: 1, x: 96, y: 120, w: 150, h: 30 },
+  direct_deposit: { page: 0, x: 149, y: 60, w: 150, h: 30 },
+  w4: { page: 0, x: 200, y: 72, w: 150, h: 30 },
+  i9: { page: 0, x: 130, y: 416, w: 150, h: 30 },
+  payroll: { page: 0, x: 142, y: 183, w: 130, h: 25 },
+};
+
+async function generatePDF(formKey, gv, signatureDataUrl) {
   const { PDFDocument, rgb, StandardFonts } = PDFLib;
 
   // Use inlined base64 templates (Streamlit) or fetch from file (standalone)
@@ -34,6 +43,16 @@ async function generatePDF(formKey, gv) {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fillColor = rgb(...FILL_COLOR_RGB);
   const checkColor = rgb(...CHECK_COLOR_RGB);
+
+  // Embed signature image if provided
+  let sigImage = null;
+  if (signatureDataUrl && signatureDataUrl.startsWith('data:image/png')) {
+    const sigB64 = signatureDataUrl.split(',')[1];
+    const sigRaw = atob(sigB64);
+    const sigArr = new Uint8Array(sigRaw.length);
+    for (let i = 0; i < sigRaw.length; i++) sigArr[i] = sigRaw.charCodeAt(i);
+    sigImage = await pdfDoc.embedPng(sigArr);
+  }
 
   const generators = {
     employee_app: fillEmployeeApp,
@@ -74,6 +93,15 @@ async function generatePDF(formKey, gv) {
         start: { x: cx + sz * 0.35, y: cy - sz * 0.4 }, end: { x: cx + sz, y: cy + sz * 0.6 },
         thickness: 1.5, color: checkColor
       });
+    }
+  }
+
+  // Draw signature image on the correct page
+  if (sigImage && SIGNATURE_COORDS[formKey]) {
+    const sc = SIGNATURE_COORDS[formKey];
+    const targetPage = pages[sc.page];
+    if (targetPage) {
+      targetPage.drawImage(sigImage, { x: sc.x, y: sc.y, width: sc.w, height: sc.h });
     }
   }
 

@@ -10,6 +10,7 @@ dist/
 
 # Secrets - NEVER commit
 .streamlit/secrets.toml
+.env
 
 # OS files
 Thumbs.db

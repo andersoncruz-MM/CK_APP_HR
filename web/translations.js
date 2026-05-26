@@ -268,6 +268,16 @@ const TRANSLATIONS = {
     ht: "Nou pral kontakte ou byento. / We will contact you soon. / Nos pondremos en contacto pronto."
   },
   doc_new_application: { en: "New Application", es: "Nueva Solicitud", ht: "Nouvo Aplikasyon" },
+  // Store selection
+  doc_store_selection: { en: "Store Selection", es: "Seleccion de Tienda", ht: "Seleksyon Magazen" },
+  doc_select_store: { en: "Select store to apply", es: "Seleccione tienda donde desea aplicar", ht: "Chwazi magazen kote ou vle aplike" },
+  doc_store_required: { en: "Please select a store.", es: "Seleccione una tienda.", ht: "Tanpri chwazi yon magazen." },
+  // Signature
+  doc_signature_section: { en: "Your Signature", es: "Su Firma", ht: "Siyati Ou" },
+  doc_signature_required: { en: "Please sign before submitting.", es: "Firme antes de enviar.", ht: "Tanpri siyen anvan ou soumèt." },
+  sig_label: { en: "Signature / Firma", es: "Firma / Signature", ht: "Siyati / Signature" },
+  sig_placeholder: { en: "Sign here / Firme aqui / Siyen isit", es: "Firme aqui / Sign here / Siyen isit", ht: "Siyen isit / Sign here / Firme aqui" },
+  sig_clear: { en: "Clear / Borrar", es: "Borrar / Clear", ht: "Efase / Clear" },
 };
 
 let currentLang = "en";

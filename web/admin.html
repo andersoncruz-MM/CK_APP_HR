@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicken Kitchen HR - Admin Review</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',Arial,sans-serif; background:#2C2C2C; color:#333; min-height:100vh; }
+    .header { background:#D32F2F; padding:18px 24px; text-align:center; }
+    .header h1 { color:#fff; font-size:22px; letter-spacing:3px; }
+    .header p { color:#ffcdd2; font-size:12px; margin-top:4px; }
+    .container { max-width:700px; margin:30px auto; padding:0 20px; }
+    .card { background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.3); overflow:hidden; margin-bottom:20px; }
+    .card-header { background:#f5f5f5; padding:16px 20px; border-bottom:1px solid #ddd; }
+    .card-header h2 { font-size:18px; color:#333; }
+    .card-body { padding:20px; }
+    .info-row { display:flex; padding:8px 0; border-bottom:1px solid #f0f0f0; }
+    .info-label { width:130px; color:#777; font-size:13px; flex-shrink:0; }
+    .info-value { font-size:14px; font-weight:500; }
+    .status-badge { display:inline-block; padding:4px 12px; border-radius:12px; font-size:12px; font-weight:bold; text-transform:uppercase; }
+    .status-pending { background:#FFF3E0; color:#E65100; }
+    .status-approved { background:#E8F5E9; color:#2E7D32; }
+    .status-rejected { background:#FFEBEE; color:#C62828; }
+    .docs-list { list-style:none; padding:0; }
+    .docs-list li { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f0f0f0; }
+    .docs-list li:last-child { border-bottom:none; }
+    .doc-name { font-size:13px; color:#333; }
+    .doc-download { color:#1976D2; text-decoration:none; font-size:12px; cursor:pointer; }
+    .doc-download:hover { text-decoration:underline; }
+    .sig-preview { max-width:300px; border:1px solid #ddd; border-radius:6px; margin:10px 0; background:#fff; }
+    .approve-section { text-align:center; padding:20px; }
+    .approve-section label { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px; font-size:14px; cursor:pointer; }
+    .approve-section input[type=checkbox] { width:20px; height:20px; accent-color:#4CAF50; }
+    .approve-section input[type=text] { width:100%; max-width:300px; padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:14px; margin-bottom:12px; }
+    .btn-approve { background:#4CAF50; color:#fff; border:none; padding:14px 40px; border-radius:6px; font-size:16px; font-weight:bold; cursor:pointer; }
+    .btn-approve:hover { background:#43A047; }
+    .btn-approve:disabled { background:#ccc; cursor:not-allowed; }
+    .error { text-align:center; padding:60px 20px; color:#999; }
+    .error h2 { color:#D32F2F; margin-bottom:10px; }
+    .loading { text-align:center; padding:60px; color:#999; font-size:16px; }
+    .success-msg { text-align:center; padding:40px; }
+    .success-msg h2 { color:#4CAF50; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>CHICKEN KITCHEN</h1>
+    <p>Personnel Review / Revision de Personal</p>
+  </div>
+
+  <div class="container" id="main">
+    <div class="loading" id="loading">Loading application... / Cargando solicitud...</div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (!token) {
+      document.getElementById('main').innerHTML =
+        '<div class="error"><h2>Invalid Link</h2><p>No token provided. / Enlace invalido.</p></div>';
+    } else {
+      loadApplication();
+    }
+
+    async function loadApplication() {
+      try {
+        const resp = await fetch('/api/admin/review?token=' + encodeURIComponent(token));
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || 'Not found');
+        }
+        const data = await resp.json();
+        renderApplication(data);
+      } catch (e) {
+        document.getElementById('main').innerHTML =
+          '<div class="error"><h2>Application Not Found</h2><p>' + e.message + '</p></div>';
+      }
+    }
+
+    function renderApplication(data) {
+      const app = data.application;
+      const docs = data.documents;
+      const isApproved = app.status === 'approved';
+      const statusClass = 'status-' + app.status;
+
+      let html = `
+        <div class="card">
+          <div class="card-header">
+            <h2>Applicant Information / Datos del Postulante</h2>
+          </div>
+          <div class="card-body">
+            <div class="info-row"><span class="info-label">Name:</span><span class="info-value">${app.name}</span></div>
+            <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${app.email}</span></div>
+            <div class="info-row"><span class="info-label">Phone:</span><span class="info-value">${app.phone || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">Store:</span><span class="info-value">${app.store_name}</span></div>
+            <div class="info-row"><span class="info-label">Date:</span><span class="info-value">${new Date(app.created_at).toLocaleString()}</span></div>
+            <div class="info-row"><span class="info-label">Status:</span><span class="info-value"><span class="status-badge ${statusClass}">${app.status}</span></span></div>
+          </div>
+        </div>
+
+        ${app.signature_b64 ? `
+        <div class="card">
+          <div class="card-header"><h2>Signature / Firma</h2></div>
+          <div class="card-body" style="text-align:center;">
+            <img src="${app.signature_b64}" class="sig-preview" alt="Applicant signature">
+          </div>
+        </div>` : ''}
+
+        <div class="card">
+          <div class="card-header"><h2>Documents / Documentos (${docs.length})</h2></div>
+          <div class="card-body">
+            <ul class="docs-list">
+              ${docs.map(d => `
+                <li>
+                  <span class="doc-name">${d.filename}</span>
+                  <a class="doc-download" onclick="downloadDoc('${d.id}')">Download</a>
+                </li>`).join('')}
+            </ul>
+          </div>
+        </div>`;
+
+      if (isApproved) {
+        html += `
+          <div class="card">
+            <div class="success-msg">
+              <h2>&#10003; Application Approved</h2>
+              <p>This application was approved and sent to HR.</p>
+              <p>Esta solicitud fue aprobada y enviada a RR.HH.</p>
+            </div>
+          </div>`;
+      } else {
+        html += `
+          <div class="card">
+            <div class="approve-section">
+              <h3 style="margin-bottom:16px;color:#333;">Approve Application / Aprobar Solicitud</h3>
+              <div style="margin-bottom:12px;">
+                <input type="text" id="approverName" placeholder="Your name / Su nombre *">
+              </div>
+              <label>
+                <input type="checkbox" id="approveCheck" onchange="toggleApproveBtn()">
+                I confirm this applicant is approved for hire.<br>
+                Confirmo que este postulante esta aprobado.
+              </label>
+              <br>
+              <button class="btn-approve" id="btnApprove" disabled onclick="approveApplication('${app.id}')">
+                APPROVE / APROBAR
+              </button>
+            </div>
+          </div>`;
+      }
+
+      document.getElementById('main').innerHTML = html;
+    }
+
+    function toggleApproveBtn() {
+      const cb = document.getElementById('approveCheck');
+      const btn = document.getElementById('btnApprove');
+      if (btn) btn.disabled = !cb.checked;
+    }
+
+    async function approveApplication(appId) {
+      const name = document.getElementById('approverName').value.trim();
+      if (!name) {
+        alert('Please enter your name / Ingrese su nombre');
+        return;
+      }
+
+      const btn = document.getElementById('btnApprove');
+      btn.disabled = true;
+      btn.textContent = 'Processing... / Procesando...';
+
+      try {
+        const resp = await fetch('/api/admin/approve/' + appId + '?token=' + encodeURIComponent(token), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approved_by: name }),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.detail || 'Error');
+        }
+
+        // Reload to show approved state
+        loadApplication();
+      } catch (e) {
+        alert('Error: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = 'APPROVE / APROBAR';
+      }
+    }
+
+    async function downloadDoc(docId) {
+      try {
+        const resp = await fetch('/api/admin/document/' + docId + '?token=' + encodeURIComponent(token));
+        if (!resp.ok) throw new Error('Failed to download');
+        const data = await resp.json();
+        const raw = atob(data.file_b64);
+        const arr = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+        const blob = new Blob([arr]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert('Download error: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
