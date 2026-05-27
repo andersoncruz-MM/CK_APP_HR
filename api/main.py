@@ -22,8 +22,10 @@ from api import email_service as email
 
 app = FastAPI(title="Chicken Kitchen HR", docs_url="/api/docs")
 
-# ─── Static files (served at root so relative CSS/JS paths work) ───
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+# ─── Static files ───
+BASE_DIR = Path(__file__).resolve().parent.parent
+WEB_DIR = BASE_DIR / "web"
+TEMPLATES_DIR = BASE_DIR / "app" / "templates"
 
 
 @app.get("/")
@@ -31,7 +33,8 @@ async def root():
     return RedirectResponse("/web/index.html")
 
 
-# Mount AFTER the root route so /api/* routes take priority
+# Mount static dirs AFTER root route so /api/* routes take priority
+app.mount("/app/templates", StaticFiles(directory=str(TEMPLATES_DIR)), name="templates")
 app.mount("/web", StaticFiles(directory=str(WEB_DIR)), name="web")
 
 
