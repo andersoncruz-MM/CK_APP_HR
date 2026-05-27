@@ -120,10 +120,120 @@ body { font-family:'Segoe UI',Tahoma,sans-serif; background:#2C2C2C; color:#333;
 }
 .btn-submit-app:hover { background:#388E3C; }
 
+/* ─── Entry Gate ─── */
+.gate-overlay {
+  position:fixed; inset:0; z-index:2000;
+  background:linear-gradient(135deg, #D32F2F 0%, #B71C1C 50%, #880E0E 100%);
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  font-family:'Segoe UI',Tahoma,sans-serif;
+}
+.gate-lang {
+  position:absolute; top:15px; right:20px;
+}
+.gate-lang select {
+  padding:5px 10px; border-radius:4px; border:none; font-size:13px;
+  background:rgba(255,255,255,.2); color:#fff; cursor:pointer;
+}
+.gate-lang select option { color:#333; background:#fff; }
+.gate-card {
+  background:#fff; border-radius:16px; padding:40px 36px 30px;
+  width:420px; max-width:92vw; box-shadow:0 20px 60px rgba(0,0,0,.3);
+  text-align:center;
+}
+.gate-logo { margin-bottom:28px; }
+.gate-logo-icon {
+  width:70px; height:70px; margin:0 auto 12px;
+  background:#D32F2F; color:#fff; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:900; letter-spacing:1px;
+  box-shadow:0 4px 15px rgba(211,47,47,.4);
+}
+.gate-logo h1 { font-size:20px; color:#333; letter-spacing:2px; margin:0; }
+.gate-subtitle { color:#888; font-size:13px; margin-top:4px; }
+
+.gate-step h2 { font-size:16px; color:#333; margin-bottom:4px; }
+.gate-hint { font-size:12px; color:#999; margin-bottom:16px; }
+
+.gate-input {
+  display:block; width:100%; padding:12px 14px;
+  border:2px solid #ddd; border-radius:8px; font-size:15px;
+  text-align:center; margin-bottom:14px; transition:border-color .2s;
+  font-family:inherit;
+}
+.gate-input:focus { outline:none; border-color:#D32F2F; box-shadow:0 0 0 3px rgba(211,47,47,.1); }
+.gate-select { text-align:left; cursor:pointer; }
+
+.gate-btn {
+  display:block; width:100%; padding:13px;
+  background:#D32F2F; color:#fff; border:none; border-radius:8px;
+  font-size:15px; font-weight:700; cursor:pointer; letter-spacing:.5px;
+  transition:background .2s, transform .1s;
+}
+.gate-btn:hover { background:#B71C1C; }
+.gate-btn:active { transform:scale(.98); }
+.gate-btn:disabled { background:#ccc; cursor:not-allowed; }
+
+.gate-error { color:#D32F2F; font-size:12px; margin-top:8px; min-height:18px; }
+.gate-link {
+  background:none; border:none; color:#D32F2F; font-size:12px;
+  cursor:pointer; margin-top:8px; text-decoration:underline;
+}
+
+/* Code digit inputs */
+.gate-code-inputs {
+  display:flex; justify-content:center; gap:8px; margin-bottom:16px;
+}
+.gate-code-digit {
+  width:44px; height:52px; text-align:center; font-size:22px; font-weight:700;
+  border:2px solid #ddd; border-radius:8px; color:#333;
+  transition:border-color .2s;
+}
+.gate-code-digit:focus { outline:none; border-color:#D32F2F; box-shadow:0 0 0 3px rgba(211,47,47,.1); }
+
+/* Store info card */
+.gate-store-info {
+  background:#F5F5F5; border:1px solid #E0E0E0; border-radius:8px;
+  padding:12px; margin-bottom:14px; text-align:left;
+}
+.gate-store-name { font-weight:700; color:#333; font-size:15px; }
+.gate-store-addr { color:#666; font-size:13px; margin-top:2px; }
+.gate-store-entity { color:#999; font-size:11px; margin-top:4px; font-style:italic; }
+
+/* Progress dots */
+.gate-progress { display:flex; justify-content:center; gap:8px; margin-top:20px; }
+.gate-dot {
+  width:10px; height:10px; border-radius:50%;
+  background:#ddd; transition:background .3s;
+}
+.gate-dot.active { background:#D32F2F; }
+.gate-dot.done { background:#4CAF50; }
+
+/* Loading spinner on buttons */
+.gate-btn.loading { pointer-events:none; }
+.gate-btn.loading span { visibility:hidden; }
+.gate-btn.loading::after {
+  content:''; position:absolute; width:20px; height:20px;
+  border:3px solid rgba(255,255,255,.3); border-top-color:#fff;
+  border-radius:50%; animation:gatespin .6s linear infinite;
+  left:50%; top:50%; margin:-10px 0 0 -10px;
+}
+.gate-btn { position:relative; }
+@keyframes gatespin { to { transform:rotate(360deg); } }
+
+/* Gate fade-out */
+.gate-overlay.fade-out {
+  animation:gatefade .4s ease forwards;
+}
+@keyframes gatefade {
+  to { opacity:0; transform:scale(1.02); pointer-events:none; }
+}
+
 @media (max-width: 800px) {
   .sidebar { width:140px; }
   .field-row { grid-template-columns:1fr; }
   .lists-bc { grid-template-columns:1fr; }
   .doc-upload-row { flex-direction:column; align-items:flex-start; }
   .doc-upload-label { min-width:unset; }
+  .gate-card { padding:28px 20px 22px; }
+  .gate-code-digit { width:38px; height:46px; font-size:18px; }
 }

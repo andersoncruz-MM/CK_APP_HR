@@ -8,8 +8,82 @@
 </head>
 <body>
 
+  <!-- ─── Entry Gate (verification + store selection) ─── -->
+  <div class="gate-overlay" id="gateOverlay">
+    <div class="gate-lang">
+      <select id="gateLangSelect" onchange="switchGateLang(this.value)">
+        <option value="en">English</option>
+        <option value="es">Espanol</option>
+        <option value="ht">Kreyol</option>
+      </select>
+    </div>
+    <div class="gate-card">
+      <div class="gate-logo">
+        <div class="gate-logo-icon">CK</div>
+        <h1>CHICKEN KITCHEN</h1>
+        <p class="gate-subtitle" id="gateSubtitle">HR Application Portal</p>
+      </div>
+
+      <!-- Step 1: Email -->
+      <div class="gate-step" id="gateStep1">
+        <h2 id="gateEmailTitle">Enter your email to begin</h2>
+        <p class="gate-hint" id="gateEmailHint">We'll send you a verification code</p>
+        <input type="email" id="gateEmail" class="gate-input" placeholder="your@email.com" autocomplete="email">
+        <button class="gate-btn" id="gateSendBtn" onclick="gateSendCode()">
+          <span id="gateSendText">Send Code</span>
+        </button>
+        <p class="gate-error" id="gateEmailError"></p>
+      </div>
+
+      <!-- Step 2: Code verification -->
+      <div class="gate-step" id="gateStep2" style="display:none">
+        <h2 id="gateCodeTitle">Enter verification code</h2>
+        <p class="gate-hint" id="gateCodeHint">Check your email for the 6-digit code</p>
+        <div class="gate-code-inputs" id="gateCodeInputs">
+          <input type="text" maxlength="1" class="gate-code-digit" data-idx="0" inputmode="numeric">
+          <input type="text" maxlength="1" class="gate-code-digit" data-idx="1" inputmode="numeric">
+          <input type="text" maxlength="1" class="gate-code-digit" data-idx="2" inputmode="numeric">
+          <input type="text" maxlength="1" class="gate-code-digit" data-idx="3" inputmode="numeric">
+          <input type="text" maxlength="1" class="gate-code-digit" data-idx="4" inputmode="numeric">
+          <input type="text" maxlength="1" class="gate-code-digit" data-idx="5" inputmode="numeric">
+        </div>
+        <button class="gate-btn" id="gateVerifyBtn" onclick="gateVerifyCode()">
+          <span id="gateVerifyText">Verify</span>
+        </button>
+        <p class="gate-error" id="gateCodeError"></p>
+        <button class="gate-link" id="gateResendBtn" onclick="gateSendCode()">Resend code</button>
+      </div>
+
+      <!-- Step 3: Store selection -->
+      <div class="gate-step" id="gateStep3" style="display:none">
+        <h2 id="gateStoreTitle">Select your store</h2>
+        <p class="gate-hint" id="gateStoreHint">Which location are you applying to?</p>
+        <select class="gate-input gate-select" id="gateStoreSelect">
+          <option value="">-- Select store --</option>
+        </select>
+        <div class="gate-store-info" id="gateStoreInfo" style="display:none">
+          <div class="gate-store-name" id="gateStoreName"></div>
+          <div class="gate-store-addr" id="gateStoreAddr"></div>
+          <div class="gate-store-entity" id="gateStoreEntity"></div>
+        </div>
+        <button class="gate-btn" id="gateContinueBtn" onclick="gateEnterApp()" disabled>
+          <span id="gateContinueText">Continue to Application</span>
+        </button>
+      </div>
+
+      <!-- Progress dots -->
+      <div class="gate-progress">
+        <span class="gate-dot active" id="gateDot1"></span>
+        <span class="gate-dot" id="gateDot2"></span>
+        <span class="gate-dot" id="gateDot3"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Main App (hidden until gate complete) ─── -->
+
   <!-- Header -->
-  <div class="header">
+  <div class="header" id="appHeader" style="display:none">
     <h1 id="headerTitle">CHICKEN KITCHEN - HR FORMS</h1>
     <div class="lang-select">
       <span id="langLabel">Language:</span>
@@ -22,7 +96,7 @@
   </div>
 
   <!-- Main -->
-  <div class="main">
+  <div class="main" id="appMain" style="display:none">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
       <button data-form="employee_app" onclick="showForm('employee_app')">Employee Application</button>

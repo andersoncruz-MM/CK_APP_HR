@@ -178,6 +178,12 @@ STORES = {
         "admin_email": "westpines@chickenkitchen.com",
         "address": "17149 Pines Blvd, Pembroke Pines, FL 33027",
     },
+    "TST": {
+        "name": "Test Store",
+        "legal_entity": "CK Test Store LLC",
+        "admin_email": "anderson@chickenkitchen.com",
+        "address": "123 Test Ave, Miami, FL 33101",
+    },
 }
 
 

@@ -38,6 +38,7 @@ const CK_STORES = {
   SUN:{name:"Sunset",legal_entity:"CK at Sunset Drive LLC",admin_email:"sunset@chickenkitchen.com",address:"1565 Sunset Dr, Coral Gables, FL 33143"},
   WBR:{name:"West Bird",legal_entity:"CK at Westbird LLC",admin_email:"westbird@chickenkitchen.com",address:"11425 SW 40th St, Miami, FL 33165"},
   WPI:{name:"West Pines",legal_entity:"CK at West Pines LLC",admin_email:"westpines@chickenkitchen.com",address:"17149 Pines Blvd, Pembroke Pines, FL 33027"},
+  TST:{name:"Test Store",legal_entity:"CK Test Store LLC",admin_email:"anderson@chickenkitchen.com",address:"123 Test Ave, Miami, FL 33101"},
 };
 
 function selectStore(code) {
@@ -1210,7 +1211,183 @@ function closePreview() {
   el('previewBody').innerHTML = '';
 }
 
+// ─── Gate: Entry Flow (email verification + store selection) ───
+let verifiedEmail = '';
+
+function switchGateLang(lang) {
+  currentLang = lang;
+  // Update gate texts
+  const g = id => document.getElementById(id);
+  g('gateSubtitle').textContent = t('gate_subtitle');
+  g('gateEmailTitle').textContent = t('gate_email_title');
+  g('gateEmailHint').textContent = t('gate_email_hint');
+  g('gateSendText').textContent = t('gate_send_btn');
+  g('gateCodeTitle').textContent = t('gate_code_title');
+  g('gateCodeHint').textContent = t('gate_code_hint');
+  g('gateVerifyText').textContent = t('gate_verify_btn');
+  g('gateResendBtn').textContent = t('gate_resend');
+  g('gateStoreTitle').textContent = t('gate_store_title');
+  g('gateStoreHint').textContent = t('gate_store_hint');
+  g('gateContinueText').textContent = t('gate_continue_btn');
+  // Update store placeholder
+  const sel = g('gateStoreSelect');
+  if (sel.options.length > 0) sel.options[0].textContent = t('gate_store_placeholder');
+}
+
+function gateSetLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) { btn.classList.add('loading'); btn.disabled = true; }
+  else { btn.classList.remove('loading'); btn.disabled = false; }
+}
+
+async function gateSendCode() {
+  const emailInput = document.getElementById('gateEmail');
+  const errorEl = document.getElementById('gateEmailError');
+  const email = emailInput.value.trim();
+  errorEl.textContent = '';
+
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    errorEl.textContent = t('gate_invalid_email');
+    emailInput.focus();
+    return;
+  }
+
+  gateSetLoading('gateSendBtn', true);
+  try {
+    const resp = await fetch('/api/verify/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (!resp.ok) throw new Error();
+    verifiedEmail = email;
+    // Move to step 2
+    document.getElementById('gateStep1').style.display = 'none';
+    document.getElementById('gateStep2').style.display = 'block';
+    document.getElementById('gateDot1').classList.replace('active', 'done');
+    document.getElementById('gateDot2').classList.add('active');
+    // Focus first code digit
+    document.querySelector('.gate-code-digit[data-idx="0"]').focus();
+  } catch (e) {
+    errorEl.textContent = t('gate_send_error');
+  }
+  gateSetLoading('gateSendBtn', false);
+}
+
+async function gateVerifyCode() {
+  const digits = document.querySelectorAll('.gate-code-digit');
+  const code = Array.from(digits).map(d => d.value).join('');
+  const errorEl = document.getElementById('gateCodeError');
+  errorEl.textContent = '';
+
+  if (code.length !== 6) {
+    errorEl.textContent = t('gate_invalid_code');
+    return;
+  }
+
+  gateSetLoading('gateVerifyBtn', true);
+  try {
+    const resp = await fetch('/api/verify/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: verifiedEmail, code })
+    });
+    if (!resp.ok) throw new Error();
+    // Move to step 3
+    document.getElementById('gateStep2').style.display = 'none';
+    document.getElementById('gateStep3').style.display = 'block';
+    document.getElementById('gateDot2').classList.replace('active', 'done');
+    document.getElementById('gateDot3').classList.add('active');
+    // Populate store dropdown
+    gatePopulateStores();
+  } catch (e) {
+    errorEl.textContent = t('gate_invalid_code');
+  }
+  gateSetLoading('gateVerifyBtn', false);
+}
+
+function gatePopulateStores() {
+  const sel = document.getElementById('gateStoreSelect');
+  sel.innerHTML = '';
+  sel.appendChild(html('option', { value: '' }, [t('gate_store_placeholder')]));
+  Object.keys(CK_STORES).sort((a, b) => CK_STORES[a].name.localeCompare(CK_STORES[b].name)).forEach(code => {
+    const s = CK_STORES[code];
+    sel.appendChild(html('option', { value: code }, [s.name + ' \u2014 ' + s.address]));
+  });
+  sel.addEventListener('change', function() {
+    const code = this.value;
+    const infoBox = document.getElementById('gateStoreInfo');
+    const continueBtn = document.getElementById('gateContinueBtn');
+    if (code && CK_STORES[code]) {
+      const store = CK_STORES[code];
+      document.getElementById('gateStoreName').textContent = store.name;
+      document.getElementById('gateStoreAddr').textContent = store.address;
+      document.getElementById('gateStoreEntity').textContent = store.legal_entity;
+      infoBox.style.display = 'block';
+      continueBtn.disabled = false;
+    } else {
+      infoBox.style.display = 'none';
+      continueBtn.disabled = true;
+    }
+  });
+}
+
+function gateEnterApp() {
+  const storeCode = document.getElementById('gateStoreSelect').value;
+  if (!storeCode) return;
+
+  // Apply store selection (auto-fills employer fields)
+  selectStore(storeCode);
+
+  // Auto-fill the verified email into the Employee Application email field
+  setVal('ea_email', verifiedEmail);
+
+  // Fade out gate
+  const overlay = document.getElementById('gateOverlay');
+  overlay.classList.add('fade-out');
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    // Show main app
+    document.getElementById('appHeader').style.display = '';
+    document.getElementById('appMain').style.display = '';
+    // Sync language to main app
+    document.getElementById('langSelect').value = currentLang;
+    switchLanguage(currentLang);
+  }, 400);
+}
+
+// Code digit auto-advance + paste support
+function initCodeDigits() {
+  const digits = document.querySelectorAll('.gate-code-digit');
+  digits.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g, '').slice(0, 1);
+      if (inp.value && i < 5) digits[i + 1].focus();
+      if (i === 5 && inp.value) gateVerifyCode();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) {
+        digits[i - 1].focus();
+      }
+    });
+    inp.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      for (let j = 0; j < 6 && j < text.length; j++) {
+        digits[j].value = text[j];
+      }
+      if (text.length >= 6) gateVerifyCode();
+      else digits[Math.min(text.length, 5)].focus();
+    });
+  });
+  // Enter key on email input
+  document.getElementById('gateEmail').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') gateSendCode();
+  });
+}
+
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
-  switchLanguage('en');
+  initCodeDigits();
+  switchGateLang('en');
 });

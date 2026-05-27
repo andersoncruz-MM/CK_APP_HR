@@ -278,6 +278,25 @@ const TRANSLATIONS = {
   sig_label: { en: "Signature / Firma", es: "Firma / Signature", ht: "Siyati / Signature" },
   sig_placeholder: { en: "Sign here / Firme aqui / Siyen isit", es: "Firme aqui / Sign here / Siyen isit", ht: "Siyen isit / Sign here / Firme aqui" },
   sig_clear: { en: "Clear / Borrar", es: "Borrar / Clear", ht: "Efase / Clear" },
+  // Gate - Entry flow
+  gate_subtitle: { en: "HR Application Portal", es: "Portal de Solicitud de Empleo", ht: "Pòtal Aplikasyon RH" },
+  gate_email_title: { en: "Enter your email to begin", es: "Ingrese su correo para comenzar", ht: "Antre imèl ou pou kòmanse" },
+  gate_email_hint: { en: "We'll send you a verification code", es: "Le enviaremos un codigo de verificacion", ht: "Nou pral voye yon kòd verifikasyon ba ou" },
+  gate_send_btn: { en: "Send Code", es: "Enviar Codigo", ht: "Voye Kòd" },
+  gate_code_title: { en: "Enter verification code", es: "Ingrese el codigo de verificacion", ht: "Antre kòd verifikasyon an" },
+  gate_code_hint: { en: "Check your email for the 6-digit code", es: "Revise su correo para el codigo de 6 digitos", ht: "Tcheke imèl ou pou kòd 6 chif la" },
+  gate_verify_btn: { en: "Verify", es: "Verificar", ht: "Verifye" },
+  gate_resend: { en: "Resend code", es: "Reenviar codigo", ht: "Voye kòd ankò" },
+  gate_store_title: { en: "Select your store", es: "Seleccione su tienda", ht: "Chwazi magazen ou" },
+  gate_store_hint: { en: "Which location are you applying to?", es: "A cual ubicacion desea aplicar?", ht: "Ki kote ou vle aplike?" },
+  gate_store_placeholder: { en: "-- Select store --", es: "-- Seleccione tienda --", ht: "-- Chwazi magazen --" },
+  gate_continue_btn: { en: "Continue to Application", es: "Continuar a la Solicitud", ht: "Kontinye nan Aplikasyon" },
+  gate_sending: { en: "Sending...", es: "Enviando...", ht: "Ap voye..." },
+  gate_verifying: { en: "Verifying...", es: "Verificando...", ht: "Ap verifye..." },
+  gate_invalid_email: { en: "Please enter a valid email", es: "Ingrese un correo valido", ht: "Tanpri antre yon imèl valab" },
+  gate_send_error: { en: "Error sending code. Try again.", es: "Error al enviar codigo. Intente de nuevo.", ht: "Erè lè w ap voye kòd. Eseye ankò." },
+  gate_invalid_code: { en: "Invalid or expired code", es: "Codigo invalido o expirado", ht: "Kòd envalid oswa ekspire" },
+  gate_select_store: { en: "Please select a store", es: "Seleccione una tienda", ht: "Tanpri chwazi yon magazen" },
 };
 
 let currentLang = "en";
